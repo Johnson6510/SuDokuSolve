@@ -21,6 +21,9 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         init9x9()
+        addResetBtn()
+        addSolveBtn()
+        
     }
 
     override func didReceiveMemoryWarning() {
@@ -29,10 +32,6 @@ class ViewController: UIViewController {
     }
 
     func init9x9() {
-        area.removeAll()
-        pixel.removeAll()
-        pixelValue.removeAll()
-        
         for x: Int in 0...8 {
             if x%3 == 0 {
                 area.append([UIView]())
@@ -43,11 +42,10 @@ class ViewController: UIViewController {
                 if x%3 == 0 && y%3 == 0 {
                     area[x/3].append(addArea(location: (x/3, y/3)))
                     view.addSubview(area[x/3][y/3])
-                    //print (x/3, y/3)
                 }
                 pixel[x].append(addPixel(location: (x%3, y%3)))
-                pixelValue[x].append(0)
                 area[x/3][y/3].addSubview(pixel[x][y])
+                pixelValue[x].append(0)
             }
         }
     }
@@ -91,14 +89,14 @@ class ViewController: UIViewController {
     
     @objc func clickButton(_ sender: UIButton!) {
         let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
-
+        
         let position = sender.convert(buttonCenter, to: self.view)
         addNumberKeyboard(position: position)
         selectedPixel = sender
     }
-
+    
     let number: [String] = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🆓"]
-
+    
     func addNumberKeyboard(position: CGPoint) {
         let size: Int = 25
         var pos: CGPoint = CGPoint(x: 0, y: 0)
@@ -131,24 +129,168 @@ class ViewController: UIViewController {
     }
 
     
+    func addResetBtn() {
+        let height = self.view.bounds.height
+        let width = self.view.bounds.width
+        
+        let edge: Int = Int(width / 10)
+        let sizeX: Int = (Int(width) - edge * 3) / 2
+        
+        let button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+        button.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/5*4)
+        button.backgroundColor = UIColor.lightGray
+        button.setTitle("RESET", for: .normal)
+        button.setTitleColor(UIColor.darkGray, for: .normal)
+        button.setTitleColor(UIColor.darkText, for: .highlighted)
+        button.layer.cornerRadius = 6
+        
+        button.addTarget(self, action: #selector(reset9x9), for: .touchUpInside)
+        view.addSubview(button)
+    }
+    
+    @objc func reset9x9() {
+        for x: Int in 0...8 {
+            for y: Int in 0...8 {
+                pixel[x][y].setValue(number: 0)
+                pixelValue[x][y] = 0
+            }
+        }
+    }
+
+    func addSolveBtn() {
+        let height = self.view.bounds.height
+        let width = self.view.bounds.width
+        
+        let edge: Int = Int(width / 10)
+        let sizeX: Int = (Int(width) - edge * 3) / 2
+        
+        let button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+        button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/5*4)
+        button.backgroundColor = UIColor.lightGray
+        button.setTitle("SOLVE", for: .normal)
+        button.setTitleColor(UIColor.darkGray, for: .normal)
+        button.setTitleColor(UIColor.darkText, for: .highlighted)
+        button.layer.cornerRadius = 6
+        
+        button.addTarget(self, action: #selector(solve), for: .touchUpInside)
+        view.addSubview(button)
+    }
+    
+    @objc func solve() {
+        let oriArray = getPixelValue()
+        print(oriArray)
+        if !check() {
+            print("Fail")
+        }
+    }
+    
+    func getPixelValue() -> [[Int]] {
+        for y: Int in 0...8 {
+            for x: Int in 0...8 {
+                pixelValue[x][y] = pixel[y][x].getValue()
+            }
+        }
+        return pixelValue
+    }
+    
+    func check() -> Bool {
+        var isRight: Bool = true
+        
+        //row
+        for x: Int in 0...8 {
+            //found out duplicates except zero
+            let duplicates = Array(Set(pixelValue[x].filter({ (i: Int) in pixelValue[x].filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+            if !duplicates.isEmpty
+            {
+                isRight = false
+                for i in 0...duplicates.count-1 {
+                    for y in 0...8 {
+                        if pixelValue[x][y] == duplicates[i] {
+                            pixel[y][x].setTitleColor(UIColor.red, for: .normal)
+                        }
+                    }
+                }
+            }
+        }
+        
+        //col
+        var col = [Int]()
+        for y: Int in 0...8 {
+            col.removeAll()
+            for x: Int in 0...8 {
+                col.append(pixelValue[x][y])
+            }
+
+            //found out duplicates except zero
+            let duplicates = Array(Set(col.filter({ (i: Int) in col.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+            if !duplicates.isEmpty
+            {
+                isRight = false
+                for i in 0...duplicates.count-1 {
+                    for x in 0...8 {
+                        if pixelValue[x][y] == duplicates[i] {
+                            pixel[y][x].setTitleColor(UIColor.red, for: .normal)
+                        }
+                    }
+                }
+            }
+        }
+        
+        //9x9
+        var area = [Int]()
+        for x: Int in 0...2 {
+            for y: Int in 0...2 {
+                area.removeAll()
+                for xx: Int in 0...2 {
+                    for yy: Int in 0...2 {
+                        area.append(pixelValue[x*3+xx][y*3+yy])
+                    }
+                }
+                
+                //found out duplicates except zero
+                let duplicates = Array(Set(area.filter({ (i: Int) in area.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+                if !duplicates.isEmpty
+                {
+                    isRight = false
+                    for i in 0...duplicates.count-1 {
+                        for xx: Int in 0...2 {
+                            for yy: Int in 0...2 {
+                                if pixelValue[x*3+xx][y*3+yy] == duplicates[i] {
+                                    pixel[y*3+yy][x*3+xx].setTitleColor(UIColor.red, for: .normal)
+                                }
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+
+        return isRight
+    }
+
+    
+
 }
 
 extension UIButton {
-    func getValue() -> String {
-        return String(describing: self.titleLabel)
+    func getValue() -> Int {
+        let result = self.titleLabel?.text ?? "0"
+        return Int(result)!
     }
+    
     
     func setValue(number: Int) {
         self.setTitle(String(number), for: .normal)
         if number == 0 {
             self.setTitleColor(UIColor.clear, for: .normal)
         } else {
-            self.setTitleColor(UIColor.black, for: .normal)
+            self.setTitleColor(UIColor.darkText, for: .normal)
         }
     }
 
     func finish() {
-        self.backgroundColor = UIColor.gray
+        self.backgroundColor = UIColor.lightGray
     }
 }
 
