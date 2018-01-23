@@ -79,7 +79,7 @@ class ViewController: UIViewController {
         let (x, y) = location
         let button = UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size))
         button.center = CGPoint(x: x*size+size/2-x*borderWidth, y: y*size+size/2-y*borderWidth)
-        button.layer.borderColor = UIColor.blue.cgColor
+        button.layer.borderColor = UIColor.lightGray.cgColor
         button.layer.borderWidth = CGFloat(borderWidth)
 
         button.setValue(number: 0)
