@@ -13,9 +13,11 @@ class ViewController: UIViewController {
     var area = [[UIView]]()
     var pixel = [[UIButton]]()
     var pixelValue = [[Int]]()
+    var mark = [Int]()
     
     var btn = [UIButton]()
     var selectedPixel = UIButton()
+    var isKeyBoardLive: Bool = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,7 +25,6 @@ class ViewController: UIViewController {
         init9x9()
         addResetBtn()
         addSolveBtn()
-        
     }
 
     override func didReceiveMemoryWarning() {
@@ -88,11 +89,14 @@ class ViewController: UIViewController {
     }
     
     @objc func clickButton(_ sender: UIButton!) {
-        let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
-        
-        let position = sender.convert(buttonCenter, to: self.view)
-        addNumberKeyboard(position: position)
-        selectedPixel = sender
+        if !isKeyBoardLive {
+            let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
+            
+            let position = sender.convert(buttonCenter, to: self.view)
+            addNumberKeyboard(position: position)
+            selectedPixel = sender
+            isKeyBoardLive = true
+        }
     }
     
     let number: [String] = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🆓"]
@@ -126,8 +130,9 @@ class ViewController: UIViewController {
         for x in 0...9 {
             btn[x].removeFromSuperview()
         }
-    }
+        isKeyBoardLive = false
 
+    }
     
     func addResetBtn() {
         let height = self.view.bounds.height
@@ -149,8 +154,8 @@ class ViewController: UIViewController {
     }
     
     @objc func reset9x9() {
-        for x: Int in 0...8 {
-            for y: Int in 0...8 {
+        for y: Int in 0...8 {
+            for x: Int in 0...8 {
                 pixel[x][y].setValue(number: 0)
                 pixelValue[x][y] = 0
             }
@@ -177,23 +182,38 @@ class ViewController: UIViewController {
     }
     
     @objc func solve() {
-        let oriArray = getPixelValue()
-        print(oriArray)
-        if !check() {
+        let oriArray = getPixelMap()
+        //print(oriArray)
+        if !checkDuplicatesBeforeStart() {
             print("Fail")
+        } else {
+            //step 1 - only one solve pixel
+            var result = true
+            repeat {
+                result = firstSearch()
+            } while result
+            if !checkFinish() {
+                //step 2 - error try or
+                print ("not finished yet")
+                errorTry()
+                //depthFirstSearch()
+            } else {
+                print ("finished")
+            }
         }
     }
     
-    func getPixelValue() -> [[Int]] {
+    func getPixelMap() -> [[Int]] {
         for y: Int in 0...8 {
             for x: Int in 0...8 {
-                pixelValue[x][y] = pixel[y][x].getValue()
+                pixelValue[x][y] = pixel[x][y].getValue()
             }
         }
         return pixelValue
     }
     
-    func check() -> Bool {
+    //Duplicates pixel = red color
+    func checkDuplicatesBeforeStart() -> Bool {
         var isRight: Bool = true
         
         //row
@@ -206,7 +226,7 @@ class ViewController: UIViewController {
                 for i in 0...duplicates.count-1 {
                     for y in 0...8 {
                         if pixelValue[x][y] == duplicates[i] {
-                            pixel[y][x].setTitleColor(UIColor.red, for: .normal)
+                            pixel[x][y].setTitleColor(UIColor.red, for: .normal)
                         }
                     }
                 }
@@ -229,7 +249,7 @@ class ViewController: UIViewController {
                 for i in 0...duplicates.count-1 {
                     for x in 0...8 {
                         if pixelValue[x][y] == duplicates[i] {
-                            pixel[y][x].setTitleColor(UIColor.red, for: .normal)
+                            pixel[x][y].setTitleColor(UIColor.red, for: .normal)
                         }
                     }
                 }
@@ -241,8 +261,8 @@ class ViewController: UIViewController {
         for x: Int in 0...2 {
             for y: Int in 0...2 {
                 area.removeAll()
-                for xx: Int in 0...2 {
-                    for yy: Int in 0...2 {
+                for yy: Int in 0...2 {
+                    for xx: Int in 0...2 {
                         area.append(pixelValue[x*3+xx][y*3+yy])
                     }
                 }
@@ -253,10 +273,10 @@ class ViewController: UIViewController {
                 {
                     isRight = false
                     for i in 0...duplicates.count-1 {
-                        for xx: Int in 0...2 {
-                            for yy: Int in 0...2 {
+                        for yy: Int in 0...2 {
+                            for xx: Int in 0...2 {
                                 if pixelValue[x*3+xx][y*3+yy] == duplicates[i] {
-                                    pixel[y*3+yy][x*3+xx].setTitleColor(UIColor.red, for: .normal)
+                                    pixel[x*3+xx][y*3+yy].setTitleColor(UIColor.red, for: .normal)
                                 }
                             }
                         }
@@ -268,9 +288,239 @@ class ViewController: UIViewController {
 
         return isRight
     }
-
     
+    //finish = true
+    func checkFinish() -> Bool {
+        var isRight: Bool = true
+        
+        //row
+        for x: Int in 0...8 {
+            if pixelValue[x].reduce(0, +) != 45 {
+                isRight = false
+            }
+        }
+        
+        //col
+        var col = [Int]()
+        for y: Int in 0...8 {
+            col.removeAll()
+            for x: Int in 0...8 {
+                col.append(pixelValue[x][y])
+            }
+            if col.reduce(0, +) != 45 {
+                isRight = false
+            }
+        }
+        
+        //9x9
+        var area = [Int]()
+        for y: Int in 0...2 {
+            for x: Int in 0...2 {
+                area.removeAll()
+                for yy: Int in 0...2 {
+                    for xx: Int in 0...2 {
+                        area.append(pixelValue[x*3+xx][y*3+yy])
+                    }
+                }
+                if area.reduce(0, +) != 45 {
+                    isRight = false
+                }
+            }
+        }
+        
+        return isRight
+    }
 
+    func getNonUseNumber(x: Int, y: Int) -> [Int] {
+        var found = [Int]()
+        mark = Array(repeating: 0, count: 10)
+        for i in 0...8 {
+            //row
+            mark[pixelValue[i][y]] = 1
+            //col
+            mark[pixelValue[x][i]] = 1
+            //9x9
+            mark[pixelValue[x/3*3+i%3][y/3*3+i/3]] = 1
+            //print(pixelValue[i][y], pixelValue[x][i], pixelValue[x/3*3+i%3][y/3*3+i/3])
+        }
+        for i in 1...9 {
+            if mark[i] == 0 {
+                found.append(i)
+            }
+        }
+        return found
+    }
+
+    func firstSearch() -> Bool {
+        var result = false
+        
+        //found out only one number space on the pixel
+        for y in 0...8 {
+            for x in 0...8 {
+                if pixelValue[x][y] != 0 {
+                    continue
+                }
+                let found = getNonUseNumber(x: x, y: y)
+                print("get non-usd number(x,y): ", x, y, "count = ", found.count, found)
+                if found.count == 1 {
+                    pixelValue[x][y] = found[0]
+                    pixel[x][y].setBlueValue(number: found[0])
+                    result = true
+                }
+            }
+        }
+        print("-----step 1 finish-----")
+        return result
+    }
+    
+    //pixel had Duplicates = false
+    func checkDuplicates(x: Int, y: Int) -> Bool {
+        var isNotDuplicates: Bool = true
+        var duplicates: [Int]
+        
+        //row
+        duplicates = Array(Set(pixelValue[x].filter({ (i: Int) in pixelValue[x].filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+        if !duplicates.isEmpty
+        {
+            isNotDuplicates = false
+        }
+        
+        //col
+        var col = [Int]()
+        for x: Int in 0...8 {
+            col.append(pixelValue[x][y])
+        }
+        duplicates = Array(Set(col.filter({ (i: Int) in col.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+        if !duplicates.isEmpty
+        {
+            isNotDuplicates = false
+        }
+        
+        //9x9
+        var area = [Int]()
+        for yy: Int in 0...2 {
+            for xx: Int in 0...2 {
+                area.append(pixelValue[x/3*3+xx][y/3*3+yy])
+            }
+        }
+        duplicates = Array(Set(area.filter({ (i: Int) in area.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+        if !duplicates.isEmpty
+        {
+            isNotDuplicates = false
+        }
+        
+        return isNotDuplicates
+    }
+
+    func errorTry() {
+        var tempX: Int = -1
+        var tempY: Int = -1
+        var menoryX = [Int]()
+        var menoryY = [Int]()
+
+        //found out first space pixel
+        for y in 0...8 {
+            for x in 0...8 {
+                tempX = x
+                tempY = y
+                if pixelValue[tempX][tempY] == 0 {
+                    break
+                }
+            }
+            if pixelValue[tempX][tempY] == 0 {
+                break
+            }
+        }
+        print("found first zreo", tempX, tempY)
+
+        repeat {
+            pixelValue[tempX][tempY] += 1
+            pixel[tempX][tempY].setBlueValue(number: pixelValue[tempX][tempY])
+            print("set ", tempX, tempY, "=", pixelValue[tempX][tempY])
+            if pixelValue[tempX][tempY] > 9 {
+                print("answer wrong, clean and return")
+                pixelValue[tempX][tempY] = 0
+                pixel[tempX][tempY].setValue(number: 0)
+                if !menoryX.isEmpty {
+                    tempX = menoryX.popLast()!
+                    tempY = menoryY.popLast()!
+                    print("pop", tempX, tempY)
+                } else {
+                    print("empty stack!!")
+                    break
+                }
+            } else {
+                if self.checkDuplicates(x: tempX, y: tempY) {
+                    menoryX.append(tempX)
+                    menoryY.append(tempY)
+                    print("push", tempX, tempY)
+                    //found out next space pixel
+                    for y in tempY...8 {
+                        for x in 0...8 {
+                            tempX = x
+                            tempY = y
+                            if pixelValue[x][y] == 0 {
+                                break
+                            }
+                        }
+                        if pixelValue[tempX][tempY] == 0 {
+                            break
+                        }
+                    }
+                    print("found next zreo", tempX, tempY)
+                }
+            }
+        } while !(tempX == 8 && tempY == 8)
+
+        if pixelValue[8][8] == 0 {
+            let found = getNonUseNumber(x: 8, y: 8)
+            if !found.isEmpty {
+                pixelValue[tempX][tempY] = found[0]
+                pixel[tempX][tempY].setBlueValue(number: found[0])
+            } else {
+                print("error!!!")
+            }
+        }
+    }
+    
+    func depthFirstSearch() {
+        var min = 10
+        var menoryX: Int = -1
+        var menoryY: Int = -1
+
+        //found out minimum pixel space
+        for y in 0...8 {
+            for x in 0...8 {
+                if pixelValue[x][y] != 0 {
+                    continue
+                }
+                let found = getNonUseNumber(x: x, y: y)
+                print("get non-use number(x,y): ", x, y, "count = ", found.count, found)
+                if found.count == 0 {
+                    return
+                } else if min > found.count {
+                    min = found.count
+                    menoryX = x
+                    menoryY = y
+                }
+            }
+        }
+        
+        //finish -> no pixel equip zero
+        if menoryX == -1 && menoryY == -1 {
+            return
+        }
+        
+        let found = getNonUseNumber(x: menoryX, y: menoryY)
+        //for i in 1...9 {
+        for i in 0..<found.count {
+            pixelValue[menoryX][menoryY] = found[i]
+            pixel[menoryX][menoryY].setBlueValue(number: found[i])
+            depthFirstSearch()
+        }
+        pixelValue[menoryX][menoryY] = 0
+        //pixel[menoryX][menoryY].setValue(number: 0)
+    }
 }
 
 extension UIButton {
@@ -279,7 +529,6 @@ extension UIButton {
         return Int(result)!
     }
     
-    
     func setValue(number: Int) {
         self.setTitle(String(number), for: .normal)
         if number == 0 {
@@ -287,6 +536,11 @@ extension UIButton {
         } else {
             self.setTitleColor(UIColor.darkText, for: .normal)
         }
+    }
+
+    func setBlueValue(number: Int) {
+        self.setTitle(String(number), for: .normal)
+        self.setTitleColor(UIColor.blue, for: .normal)
     }
 
     func finish() {
