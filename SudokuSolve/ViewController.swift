@@ -12,18 +12,11 @@ class ViewController: UIViewController {
 
     var area = [[UIView]]()
     var pixel = [[UIButton]]()
-    var pixelValue = [[Int]]()
-    var pixelStatus = [[Int]]()
     var mark = [Int]()
-    
-    enum status: Int {
-        case question = 1
-        case answer = 0
-    }
     
     var btn = [UIButton]()
     var selectedPixel = UIButton()
-    var isKeyBoardLive: Bool = false
+    var isKeyBoardLock: Bool = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -44,17 +37,15 @@ class ViewController: UIViewController {
                 area.append([UIView]())
             }
             pixel.append([UIButton]())
-            pixelValue.append([Int]())
-            pixelStatus.append([Int]())
             for y: Int in 0...8 {
                 if x%3 == 0 && y%3 == 0 {
                     area[x/3].append(addArea(location: (x/3, y/3)))
                     view.addSubview(area[x/3][y/3])
                 }
                 pixel[x].append(addPixel(location: (x%3, y%3)))
+                pixel[x][y].value = 0
+                pixel[x][y].status = UIButton.status.answer.rawValue
                 area[x/3][y/3].addSubview(pixel[x][y])
-                pixelValue[x].append(0)
-                pixelStatus[x].append(status.answer.rawValue)
             }
         }
     }
@@ -89,141 +80,59 @@ class ViewController: UIViewController {
         button.center = CGPoint(x: x*size+size/2-x*borderWidth, y: y*size+size/2-y*borderWidth)
         button.layer.borderColor = UIColor.lightGray.cgColor
         button.layer.borderWidth = CGFloat(borderWidth)
-        
         button.titleLabel?.font = UIFont(name: "Hiragino Maru Gothic ProN", size: CGFloat(size-20))
-
-        /*
-         UIFont.familyNames
-
-         "Copperplate",
-         "Heiti SC",
-         "Apple SD Gothic Neo",
-         "Thonburi",
-         "Gill Sans",
-         "Marker Felt",
-         "Hiragino Maru Gothic ProN",
-         "Courier New",
-         "Kohinoor Telugu",
-         "Heiti TC",
-         "Avenir Next Condensed",
-         "Tamil Sangam MN",
-         "Helvetica Neue",
-         "Gurmukhi MN",
-         "Georgia",
-         "Times New Roman",
-         "Sinhala Sangam MN",
-         "Arial Rounded MT Bold",
-         "Kailasa",
-         "Kohinoor Devanagari",
-         "Kohinoor Bangla",
-         "Chalkboard SE",
-         "Apple Color Emoji",
-         "PingFang TC",
-         "Gujarati Sangam MN",
-         "Geeza Pro",
-         "Damascus",
-         "Noteworthy",
-         "Avenir",
-         "Mishafi",
-         "Academy Engraved LET",
-         "Futura",
-         "Party LET",
-         "Kannada Sangam MN",
-         "Arial Hebrew",
-         "Farah",
-         "Arial",
-         "Chalkduster",
-         "Kefa",
-         "Hoefler Text",
-         "Optima",
-         "Palatino",
-         "Malayalam Sangam MN",
-         "Al Nile",
-         "Lao Sangam MN",
-         "Bradley Hand",
-         "Hiragino Mincho ProN",
-         "PingFang HK",
-         "Helvetica",
-         "Courier",
-         "Cochin",
-         "Trebuchet MS",
-         "Devanagari Sangam MN",
-         "Oriya Sangam MN",
-         "Snell Roundhand",
-         "Zapf Dingbats",
-         "Bodoni 72",
-         "Verdana",
-         "American Typewriter",
-         "Avenir Next",
-         "Baskerville",
-         "Khmer Sangam MN",
-         "Didot",
-         "Savoye LET",
-         "Bodoni Ornaments",
-         "Symbol",
-         "Menlo",
-         "Noto Nastaliq Urdu",
-         "Bodoni 72 Smallcaps",
-         "Papyrus",
-         "Hiragino Sans",
-         "PingFang SC",
-         "Myanmar Sangam MN",
-         "Zapfino",
-         "Telugu Sangam MN",
-         "Bodoni 72 Oldstyle",
-         "Euphemia UCAS",
-         "Bangla Sangam MN",
- */
-        button.setValue(number: 0)
         button.addTarget(self, action: #selector(ViewController.clickButton(_:)), for: .touchUpInside)
         
         return button
     }
     
     @objc func clickButton(_ sender: UIButton!) {
-        if !isKeyBoardLive {
+        if !isKeyBoardLock {
             let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
             
             let position = sender.convert(buttonCenter, to: self.view)
             addNumberKeyboard(position: position)
             selectedPixel = sender
-            isKeyBoardLive = true
+            isKeyBoardLock = true
         }
     }
     
-    let number: [String] = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🆓"]
-    
     func addNumberKeyboard(position: CGPoint) {
+        let number: [String] = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🆓"]
         let size: Int = 25
         var pos: CGPoint = CGPoint(x: 0, y: 0)
         
         btn.removeAll()
-        for x: Int in 0...8 {
+        for x: Int in 0...9 {
             btn.append(UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size)))
-            pos.x = position.x + CGFloat(x % 3 * size - size)
-            pos.y = position.y + CGFloat(x / 3 * size - size)
+            if x != 9 {
+                pos.x = position.x + CGFloat(x % 3 * size - size)
+                pos.y = position.y + CGFloat(x / 3 * size - size)
+            } else {
+                pos.x = position.x
+                pos.y = position.y + CGFloat(size * 2)
+            }
             btn[x].center = CGPoint(x: pos.x, y: pos.y)
+            btn[x].value = x+1
             btn[x].setTitle(number[x], for: .normal)
             btn[x].addTarget(self, action: #selector(ViewController.setNumber(_:)), for: .touchUpInside)
             view.addSubview(btn[x])
         }
-        btn.append(UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size)))
-        pos.x = position.x
-        pos.y = position.y + CGFloat(size * 2)
-        btn[9].center = CGPoint(x: pos.x, y: pos.y)
-        btn[9].setTitle("🆓", for: .normal)
-        btn[9].addTarget(self, action: #selector(ViewController.setNumber(_:)), for: .touchUpInside)
-        view.addSubview(btn[9])
     }
     
     @objc func setNumber(_ sender: UIButton!) {
-        let index = number.index(of: sender.currentTitle!)
-        selectedPixel.setValue(number: Int((index!+1)%10))
+        if sender.value%10 != 0 {
+            selectedPixel.status = UIButton.status.question.rawValue
+        } else {
+            selectedPixel.status = UIButton.status.answer.rawValue
+        }
+        selectedPixel.value = sender.value%10
         for x in 0...9 {
             btn[x].removeFromSuperview()
         }
-        isKeyBoardLive = false
-        _ = checkDuplicatesBeforeStart()
+        isKeyBoardLock = false
+        _ = showDuplicates()
+        _ = checkFinish()
     }
     
     func addResetBtn() {
@@ -248,9 +157,9 @@ class ViewController: UIViewController {
     @objc func reset9x9() {
         for y: Int in 0...8 {
             for x: Int in 0...8 {
-                pixel[x][y].setValue(number: 0)
-                pixelValue[x][y] = 0
-                pixelStatus[x][y] = status.answer.rawValue
+                pixel[x][y].value = 0
+                pixel[x][y].status = UIButton.status.answer.rawValue
+                pixel[x][y].finish(flag: false)
             }
         }
     }
@@ -275,7 +184,7 @@ class ViewController: UIViewController {
     }
     
     @objc func solve() {
-        if !checkDuplicatesBeforeStart() {
+        if !showDuplicates() {
             let duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
             let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
             duplicatesAlert.addAction(OKAction)
@@ -298,38 +207,43 @@ class ViewController: UIViewController {
 //                print ("finished")
 //            }
         }
-    }
-    
-    func getPixelMap() -> [[Int]] {
-        for y: Int in 0...8 {
-            for x: Int in 0...8 {
-                pixelValue[x][y] = pixel[x][y].getValue()
-                if pixelValue[x][y] == 0 {
-                    pixel[x][y].setTitleColor(UIColor.clear, for: .normal)
-                } else {
-                    pixel[x][y].setTitleColor(UIColor.darkText, for: .normal)
-                }
-            }
-        }
-        return pixelValue
+        _ = checkFinish()
     }
     
     //Duplicates pixel = red color
-    @objc func checkDuplicatesBeforeStart() -> Bool {
+    @objc func showDuplicates() -> Bool {
         var isRight: Bool = true
         
-        _ = getPixelMap()
-        
+        //reset font color
+        for y: Int in 0...8 {
+            for x: Int in 0...8 {
+                if pixel[x][y].value == 0 {
+                    pixel[x][y].setTitleColor(UIColor.clear, for: .normal)
+                } else {
+                    if pixel[x][y].status == UIButton.status.question.rawValue {
+                        pixel[x][y].setTitleColor(UIColor.darkText, for: .normal)
+                    } else {
+                        pixel[x][y].setTitleColor(UIColor.blue, for: .normal)
+                    }
+                }
+            }
+        }
+
         //row
+        var row = [Int]()
         for x: Int in 0...8 {
+            row.removeAll()
+            for y: Int in 0...8 {
+                row.append(pixel[x][y].value)
+            }
             //found out duplicates except zero
-            let duplicates = Array(Set(pixelValue[x].filter({ (i: Int) in pixelValue[x].filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+            let duplicates = Array(Set(row.filter({ (i: Int) in row.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
             if !duplicates.isEmpty
             {
                 isRight = false
                 for i in 0...duplicates.count-1 {
                     for y in 0...8 {
-                        if pixelValue[x][y] == duplicates[i] {
+                        if pixel[x][y].value == duplicates[i] {
                             pixel[x][y].setTitleColor(UIColor.red, for: .normal)
                         }
                     }
@@ -342,9 +256,8 @@ class ViewController: UIViewController {
         for y: Int in 0...8 {
             col.removeAll()
             for x: Int in 0...8 {
-                col.append(pixelValue[x][y])
+                col.append(pixel[x][y].value)
             }
-
             //found out duplicates except zero
             let duplicates = Array(Set(col.filter({ (i: Int) in col.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
             if !duplicates.isEmpty
@@ -352,7 +265,7 @@ class ViewController: UIViewController {
                 isRight = false
                 for i in 0...duplicates.count-1 {
                     for x in 0...8 {
-                        if pixelValue[x][y] == duplicates[i] {
+                        if pixel[x][y].value == duplicates[i] {
                             pixel[x][y].setTitleColor(UIColor.red, for: .normal)
                         }
                     }
@@ -367,10 +280,9 @@ class ViewController: UIViewController {
                 area.removeAll()
                 for yy: Int in 0...2 {
                     for xx: Int in 0...2 {
-                        area.append(pixelValue[x*3+xx][y*3+yy])
+                        area.append(pixel[x*3+xx][y*3+yy].value)
                     }
                 }
-                
                 //found out duplicates except zero
                 let duplicates = Array(Set(area.filter({ (i: Int) in area.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
                 if !duplicates.isEmpty
@@ -379,7 +291,7 @@ class ViewController: UIViewController {
                     for i in 0...duplicates.count-1 {
                         for yy: Int in 0...2 {
                             for xx: Int in 0...2 {
-                                if pixelValue[x*3+xx][y*3+yy] == duplicates[i] {
+                                if pixel[x*3+xx][y*3+yy].value == duplicates[i] {
                                     pixel[x*3+xx][y*3+yy].setTitleColor(UIColor.red, for: .normal)
                                 }
                             }
@@ -397,10 +309,26 @@ class ViewController: UIViewController {
     func checkFinish() -> Bool {
         var isRight: Bool = true
         
+        //reset finish status
+        for y: Int in 0...8 {
+            for x: Int in 0...8 {
+                pixel[x][y].finish(flag: false)
+            }
+        }
+
         //row
+        var row = [Int]()
         for x: Int in 0...8 {
-            if pixelValue[x].reduce(0, +) != 45 {
+            row.removeAll()
+            for y: Int in 0...8 {
+                row.append(pixel[x][y].value)
+            }
+            if row.reduce(0, +) != 45 {
                 isRight = false
+            } else {
+                for y: Int in 0...8 {
+                    pixel[x][y].finish(flag: true)
+                }
             }
         }
         
@@ -409,10 +337,14 @@ class ViewController: UIViewController {
         for y: Int in 0...8 {
             col.removeAll()
             for x: Int in 0...8 {
-                col.append(pixelValue[x][y])
+                col.append(pixel[x][y].value)
             }
             if col.reduce(0, +) != 45 {
                 isRight = false
+            } else {
+                for x: Int in 0...8 {
+                    pixel[x][y].finish(flag: true)
+                }
             }
         }
         
@@ -423,11 +355,17 @@ class ViewController: UIViewController {
                 area.removeAll()
                 for yy: Int in 0...2 {
                     for xx: Int in 0...2 {
-                        area.append(pixelValue[x*3+xx][y*3+yy])
+                        area.append(pixel[x*3+xx][y*3+yy].value)
                     }
                 }
                 if area.reduce(0, +) != 45 {
                     isRight = false
+                } else {
+                    for yy: Int in 0...2 {
+                        for xx: Int in 0...2 {
+                            pixel[x*3+xx][y*3+yy].finish(flag: true)
+                        }
+                    }
                 }
             }
         }
@@ -440,12 +378,11 @@ class ViewController: UIViewController {
         mark = Array(repeating: 0, count: 10)
         for i in 0...8 {
             //row
-            mark[pixelValue[i][y]] = 1
+            mark[pixel[i][y].value] = 1
             //col
-            mark[pixelValue[x][i]] = 1
+            mark[pixel[x][i].value] = 1
             //9x9
-            mark[pixelValue[x/3*3+i%3][y/3*3+i/3]] = 1
-            //print(pixelValue[i][y], pixelValue[x][i], pixelValue[x/3*3+i%3][y/3*3+i/3])
+            mark[pixel[x/3*3+i%3][y/3*3+i/3].value] = 1
         }
         for i in 1...9 {
             if mark[i] == 0 {
@@ -461,19 +398,17 @@ class ViewController: UIViewController {
         //found out only one number space on the pixel
         for y in 0...8 {
             for x in 0...8 {
-                if pixelValue[x][y] != 0 {
+                if pixel[x][y].value != 0 {
                     continue
                 }
                 let found = getNonUseNumber(x: x, y: y)
                 print("get non-usd number(x,y): ", x, y, "count = ", found.count, found)
                 if found.count == 1 {
-                    pixelValue[x][y] = found[0]
-                    pixel[x][y].setBlueValue(number: found[0])
+                    pixel[x][y].value = found[0]
                     result = true
                 }
             }
         }
-        print("-----step 1 finish-----")
         return result
     }
     
@@ -483,7 +418,11 @@ class ViewController: UIViewController {
         var duplicates: [Int]
         
         //row
-        duplicates = Array(Set(pixelValue[x].filter({ (i: Int) in pixelValue[x].filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
+        var row = [Int]()
+        for yy: Int in 0...8 {
+            row.append(pixel[x][yy].value)
+        }
+        duplicates = Array(Set(row.filter({ (i: Int) in row.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
         if !duplicates.isEmpty
         {
             isDuplicates = true
@@ -491,8 +430,8 @@ class ViewController: UIViewController {
         
         //col
         var col = [Int]()
-        for x: Int in 0...8 {
-            col.append(pixelValue[x][y])
+        for xx: Int in 0...8 {
+            col.append(pixel[xx][y].value)
         }
         duplicates = Array(Set(col.filter({ (i: Int) in col.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
         if !duplicates.isEmpty
@@ -504,7 +443,7 @@ class ViewController: UIViewController {
         var area = [Int]()
         for yy: Int in 0...2 {
             for xx: Int in 0...2 {
-                area.append(pixelValue[x/3*3+xx][y/3*3+yy])
+                area.append(pixel[x/3*3+xx][y/3*3+yy].value)
             }
         }
         duplicates = Array(Set(area.filter({ (i: Int) in area.filter({ $0 == i }).count > 1}))).filter { $0 != 0 }
@@ -516,6 +455,7 @@ class ViewController: UIViewController {
         return isDuplicates
     }
 
+    //error try from first space to final spaec
     func errorTry() {
         var tempX: Int = -1
         var tempY: Int = -1
@@ -527,24 +467,22 @@ class ViewController: UIViewController {
             for x in 0...8 {
                 tempX = x
                 tempY = y
-                if pixelValue[tempX][tempY] == 0 {
+                if pixel[tempX][tempY].value == 0 {
                     break
                 }
             }
-            if pixelValue[tempX][tempY] == 0 {
+            if pixel[tempX][tempY].value == 0 {
                 break
             }
         }
         print("found first zero", tempX, tempY)
 
         repeat {
-            pixelValue[tempX][tempY] += 1
-            pixel[tempX][tempY].setBlueValue(number: pixelValue[tempX][tempY])
-            print("set ", tempX, tempY, "=", pixelValue[tempX][tempY])
-            if pixelValue[tempX][tempY] > 9 {
+            pixel[tempX][tempY].value += 1
+            print("set ", tempX, tempY, "=", pixel[tempX][tempY].value)
+            if pixel[tempX][tempY].value > 9 {
                 print("answer wrong, clean and return")
-                pixelValue[tempX][tempY] = 0
-                pixel[tempX][tempY].setValue(number: 0)
+                pixel[tempX][tempY].value = 0
                 if !menoryX.isEmpty {
                     tempX = menoryX.popLast()!
                     tempY = menoryY.popLast()!
@@ -563,11 +501,11 @@ class ViewController: UIViewController {
                         for x in 0...8 {
                             tempX = x
                             tempY = y
-                            if pixelValue[x][y] == 0 {
+                            if pixel[x][y].value == 0 {
                                 break
                             }
                         }
-                        if pixelValue[tempX][tempY] == 0 {
+                        if pixel[tempX][tempY].value == 0 {
                             break
                         }
                     }
@@ -576,17 +514,17 @@ class ViewController: UIViewController {
             }
         } while !(tempX == 8 && tempY == 8)
 
-        if pixelValue[8][8] == 0 {
+        if pixel[8][8].value == 0 {
             let found = getNonUseNumber(x: 8, y: 8)
             if !found.isEmpty {
-                pixelValue[tempX][tempY] = found[0]
-                pixel[tempX][tempY].setBlueValue(number: found[0])
+                pixel[tempX][tempY].value = found[0]
             } else {
                 print("error!!!")
             }
         }
     }
     
+    //DFS from minimum non use number to maximum non use number
     func depthFirstSearch() {
         var found = [Int]()
         var min: Int
@@ -601,7 +539,7 @@ class ViewController: UIViewController {
         min = 10
         for y in 0...8 {
             for x in 0...8 {
-                if pixelValue[x][y] == 0 {
+                if pixel[x][y].value == 0 {
                     found = getNonUseNumber(x: x, y: y)
                     if min > found.count {
                         min = found.count
@@ -620,21 +558,18 @@ class ViewController: UIViewController {
             }
             
             if !found.isEmpty {
-                pixelValue[tempX][tempY] = found.removeFirst()
-                print("set ", tempX, tempY, "=", pixelValue[tempX][tempY], "(", found.count, ")")
+                pixel[tempX][tempY].value = found.removeFirst()
+                print("set ", tempX, tempY, "=", pixel[tempX][tempY].value, "(", found.count, ")")
             } else {
                 print("last is empty, clean and return")
-                pixelValue[tempX][tempY] = 0
-                pixel[tempX][tempY].setValue(number: 0)
+                pixel[tempX][tempY].value = 0
                 if !menoryX.isEmpty {
                     tempX = menoryX.popLast()!
                     tempY = menoryY.popLast()!
                     tempAns = answer.popLast()!
-                    pixelValue[tempX][tempY] = 0
-                    pixel[tempX][tempY].setValue(number: 0)
+                    pixel[tempX][tempY].value = 0
                     found = getNonUseNumber(x: tempX, y: tempY)
                     print(found.count)
-                    //bug???
                     for _ in 0..<found.count {
                         let temp = found.removeFirst()
                         if temp == tempAns {
@@ -651,14 +586,12 @@ class ViewController: UIViewController {
             
             if checkDuplicates(x: tempX, y: tempY) {
                 print("answer wrong, clean and return")
-                pixelValue[tempX][tempY] = 0
-                pixel[tempX][tempY].setValue(number: 0)
+                pixel[tempX][tempY].value = 0
                 if !menoryX.isEmpty {
                     tempX = menoryX.popLast()!
                     tempY = menoryY.popLast()!
                     tempAns = answer.popLast()!
-                    pixelValue[tempX][tempY] = 0
-                    pixel[tempX][tempY].setValue(number: 0)
+                    pixel[tempX][tempY].value = 0
                     found = getNonUseNumber(x: tempX, y: tempY)
                     print(found.count)
                     for _ in 0..<found.count {
@@ -676,14 +609,13 @@ class ViewController: UIViewController {
             } else {
                 menoryX.append(tempX)
                 menoryY.append(tempY)
-                answer.append(pixelValue[tempX][tempY])
-                pixel[tempX][tempY].setBlueValue(number: pixelValue[tempX][tempY])
-                print("push", tempX, tempY, "=", pixelValue[tempX][tempY])
+                answer.append(pixel[tempX][tempY].value)
+                print("push", tempX, tempY, "=", pixel[tempX][tempY].value)
                 //found out next pixel for minimum non use number
                 min = 10
                 for y in 0...8 {
                     for x in 0...8 {
-                        if pixelValue[x][y] == 0 {
+                        if pixel[x][y].value == 0 {
                             found = getNonUseNumber(x: x, y: y)
                             if min > found.count {
                                 min = found.count
@@ -702,45 +634,54 @@ class ViewController: UIViewController {
 }
 
 extension UIButton {
-    var x: Int {
-        get {
-            return self.x
-        }
-        set {
-            self.x = newValue
-        }
+    enum status: Int {
+        case question = 1
+        case answer = 0
     }
     
-    var y: Int {
+    private struct cell {
+        static var value: Int = 0
+        static var status: Int = 0
+    }
+    
+    var value: Int {
         get {
-            return self.y
+            return objc_getAssociatedObject(self, &cell.value) as! Int
         }
         set {
-            self.y = newValue
+            objc_setAssociatedObject(self, &cell.value, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            self.setTitle(String(newValue), for: .normal)
+            if newValue == 0 {
+                self.setTitleColor(UIColor.clear, for: .normal)
+            } else {
+                if let status: Int = objc_getAssociatedObject(self, &cell.status) as? Int {
+                    if status == UIButton.status.question.rawValue {
+                        self.setTitleColor(UIColor.darkText, for: .normal)
+                    } else if status == UIButton.status.answer.rawValue {
+                        self.setTitleColor(UIColor.blue, for: .normal)
+                    } else {
+                        self.setTitleColor(UIColor.lightGray, for: .normal)
+                    }
+                }
+            }
         }
     }
 
-    func getValue() -> Int {
-        let result = self.titleLabel?.text ?? "0"
-        return Int(result)!
+    var status: Int {
+        get {
+            return objc_getAssociatedObject(self, &cell.status) as! Int
+        }
+        set {
+            objc_setAssociatedObject(self, &cell.status, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
     }
-    
-    func setValue(number: Int) {
-        self.setTitle(String(number), for: .normal)
-        if number == 0 {
-            self.setTitleColor(UIColor.clear, for: .normal)
+
+    func finish(flag: Bool) {
+        if flag {
+            self.backgroundColor = UIColor.groupTableViewBackground
         } else {
-            self.setTitleColor(UIColor.darkText, for: .normal)
+            self.backgroundColor = UIColor.clear
         }
-    }
-
-    func setBlueValue(number: Int) {
-        self.setTitle(String(number), for: .normal)
-        self.setTitleColor(UIColor.blue, for: .normal)
-    }
-
-    func finish() {
-        self.backgroundColor = UIColor.lightGray
     }
 }
 
