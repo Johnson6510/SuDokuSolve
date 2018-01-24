@@ -13,7 +13,13 @@ class ViewController: UIViewController {
     var area = [[UIView]]()
     var pixel = [[UIButton]]()
     var pixelValue = [[Int]]()
+    var pixelStatus = [[Int]]()
     var mark = [Int]()
+    
+    enum status: Int {
+        case question = 1
+        case answer = 0
+    }
     
     var btn = [UIButton]()
     var selectedPixel = UIButton()
@@ -39,6 +45,7 @@ class ViewController: UIViewController {
             }
             pixel.append([UIButton]())
             pixelValue.append([Int]())
+            pixelStatus.append([Int]())
             for y: Int in 0...8 {
                 if x%3 == 0 && y%3 == 0 {
                     area[x/3].append(addArea(location: (x/3, y/3)))
@@ -47,6 +54,7 @@ class ViewController: UIViewController {
                 pixel[x].append(addPixel(location: (x%3, y%3)))
                 area[x/3][y/3].addSubview(pixel[x][y])
                 pixelValue[x].append(0)
+                pixelStatus[x].append(status.answer.rawValue)
             }
         }
     }
@@ -81,7 +89,91 @@ class ViewController: UIViewController {
         button.center = CGPoint(x: x*size+size/2-x*borderWidth, y: y*size+size/2-y*borderWidth)
         button.layer.borderColor = UIColor.lightGray.cgColor
         button.layer.borderWidth = CGFloat(borderWidth)
+        
+        button.titleLabel?.font = UIFont(name: "Hiragino Maru Gothic ProN", size: CGFloat(size-20))
 
+        /*
+         UIFont.familyNames
+
+         "Copperplate",
+         "Heiti SC",
+         "Apple SD Gothic Neo",
+         "Thonburi",
+         "Gill Sans",
+         "Marker Felt",
+         "Hiragino Maru Gothic ProN",
+         "Courier New",
+         "Kohinoor Telugu",
+         "Heiti TC",
+         "Avenir Next Condensed",
+         "Tamil Sangam MN",
+         "Helvetica Neue",
+         "Gurmukhi MN",
+         "Georgia",
+         "Times New Roman",
+         "Sinhala Sangam MN",
+         "Arial Rounded MT Bold",
+         "Kailasa",
+         "Kohinoor Devanagari",
+         "Kohinoor Bangla",
+         "Chalkboard SE",
+         "Apple Color Emoji",
+         "PingFang TC",
+         "Gujarati Sangam MN",
+         "Geeza Pro",
+         "Damascus",
+         "Noteworthy",
+         "Avenir",
+         "Mishafi",
+         "Academy Engraved LET",
+         "Futura",
+         "Party LET",
+         "Kannada Sangam MN",
+         "Arial Hebrew",
+         "Farah",
+         "Arial",
+         "Chalkduster",
+         "Kefa",
+         "Hoefler Text",
+         "Optima",
+         "Palatino",
+         "Malayalam Sangam MN",
+         "Al Nile",
+         "Lao Sangam MN",
+         "Bradley Hand",
+         "Hiragino Mincho ProN",
+         "PingFang HK",
+         "Helvetica",
+         "Courier",
+         "Cochin",
+         "Trebuchet MS",
+         "Devanagari Sangam MN",
+         "Oriya Sangam MN",
+         "Snell Roundhand",
+         "Zapf Dingbats",
+         "Bodoni 72",
+         "Verdana",
+         "American Typewriter",
+         "Avenir Next",
+         "Baskerville",
+         "Khmer Sangam MN",
+         "Didot",
+         "Savoye LET",
+         "Bodoni Ornaments",
+         "Symbol",
+         "Menlo",
+         "Noto Nastaliq Urdu",
+         "Bodoni 72 Smallcaps",
+         "Papyrus",
+         "Hiragino Sans",
+         "PingFang SC",
+         "Myanmar Sangam MN",
+         "Zapfino",
+         "Telugu Sangam MN",
+         "Bodoni 72 Oldstyle",
+         "Euphemia UCAS",
+         "Bangla Sangam MN",
+ */
         button.setValue(number: 0)
         button.addTarget(self, action: #selector(ViewController.clickButton(_:)), for: .touchUpInside)
         
@@ -131,6 +223,7 @@ class ViewController: UIViewController {
             btn[x].removeFromSuperview()
         }
         isKeyBoardLive = false
+        _ = checkDuplicatesBeforeStart()
     }
     
     func addResetBtn() {
@@ -157,6 +250,7 @@ class ViewController: UIViewController {
             for x: Int in 0...8 {
                 pixel[x][y].setValue(number: 0)
                 pixelValue[x][y] = 0
+                pixelStatus[x][y] = status.answer.rawValue
             }
         }
     }
@@ -181,14 +275,16 @@ class ViewController: UIViewController {
     }
     
     @objc func solve() {
-        _ = getPixelMap()
         if !checkDuplicatesBeforeStart() {
-            print("Fail")
+            let duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
+            let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
+            duplicatesAlert.addAction(OKAction)
+            self.present(duplicatesAlert, animated: true, completion:nil)
         } else {
-            //DPS -> fast
+            //DPS -> fastest
             depthFirstSearch()
             
-            //only one solve + error try -> solw
+            //only one solve + error try -> solwest
 //            //step 1 - only one solve pixel
 //            var result = true
 //            repeat {
@@ -208,14 +304,21 @@ class ViewController: UIViewController {
         for y: Int in 0...8 {
             for x: Int in 0...8 {
                 pixelValue[x][y] = pixel[x][y].getValue()
+                if pixelValue[x][y] == 0 {
+                    pixel[x][y].setTitleColor(UIColor.clear, for: .normal)
+                } else {
+                    pixel[x][y].setTitleColor(UIColor.darkText, for: .normal)
+                }
             }
         }
         return pixelValue
     }
     
     //Duplicates pixel = red color
-    func checkDuplicatesBeforeStart() -> Bool {
+    @objc func checkDuplicatesBeforeStart() -> Bool {
         var isRight: Bool = true
+        
+        _ = getPixelMap()
         
         //row
         for x: Int in 0...8 {
@@ -599,6 +702,24 @@ class ViewController: UIViewController {
 }
 
 extension UIButton {
+    var x: Int {
+        get {
+            return self.x
+        }
+        set {
+            self.x = newValue
+        }
+    }
+    
+    var y: Int {
+        get {
+            return self.y
+        }
+        set {
+            self.y = newValue
+        }
+    }
+
     func getValue() -> Int {
         let result = self.titleLabel?.text ?? "0"
         return Int(result)!
