@@ -9,6 +9,10 @@
 import UIKit
 
 class ViewController: UIViewController {
+    
+    var height: CGFloat = 0
+    var width: CGFloat = 0
+    var is16x9: Bool = false
 
     var area = [[UIView]]()
     var pixel = [[UIButton]]()
@@ -17,13 +21,36 @@ class ViewController: UIViewController {
     var btn = [UIButton]()
     var selectedPixel = UIButton()
     var isKeyBoardLock: Bool = false
+    
+    var isGameMode: Bool = false
+    var solveBtn = UIButton()
+    var resetBtn = UIButton()
+    var penBtn = UIButton()
+    var isPencil: Bool = false
+    var backBtn = UIButton()
+    var newGameBtn = UIButton()
 
+    var backRec = [backRecord]()
+    var rec = [record]()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
+        height = self.view.bounds.height
+        width = self.view.bounds.width
+        print(height/width)
+        if height/width > 1.5 {
+            is16x9 = true
+            print("16:9")
+        } else {
+            is16x9 = false
+            print("4:3")
+        }
+
         init9x9()
         addResetBtn()
         addSolveBtn()
+        addGameModeBtn()
     }
 
     override func didReceiveMemoryWarning() {
@@ -51,17 +78,17 @@ class ViewController: UIViewController {
     }
     
     func addArea(location: (Int, Int)) -> UIView {
-        let height = self.view.bounds.height
-        let width = self.view.bounds.width
-        
         let borderWidth = 2
         let edge: Int = Int(width / 20)
-        let heightOffset = Int(height / 5)
+        var heightOffset = Int(height / 5)
+        if !is16x9 {
+            heightOffset = heightOffset/4*3
+        }
         let size: Int = (Int(width) - edge * 2) / 3 - 3
 
         let (x, y) = location
         let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.center = CGPoint(x: edge+x*size+size/2-x*borderWidth, y: heightOffset+y*size+size/2-y*borderWidth)
+        view.center = CGPoint(x: edge*5/4+x*size+size/2-x*borderWidth, y: heightOffset+y*size+size/2-y*borderWidth)
         view.layer.borderColor = UIColor.black.cgColor
         view.layer.borderWidth = CGFloat(borderWidth)
         
@@ -69,8 +96,6 @@ class ViewController: UIViewController {
     }
 
     func addPixel(location: (Int, Int)) -> UIButton {
-        let width = self.view.bounds.width
-        
         let borderWidth = 1
         let edge: Int = Int(width / 20)
         let size: Int = (Int(width) - edge * 2) / 9
@@ -87,7 +112,7 @@ class ViewController: UIViewController {
     }
     
     @objc func clickButton(_ sender: UIButton!) {
-        if !isKeyBoardLock {
+        if !isKeyBoardLock && sender.status != UIButton.status.gameQuestion.rawValue {
             let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
             
             let position = sender.convert(buttonCenter, to: self.view)
@@ -120,8 +145,17 @@ class ViewController: UIViewController {
         }
     }
     
+    struct backRecord {
+        var btn = UIButton()
+        var value: Int
+    }
+    
     @objc func setNumber(_ sender: UIButton!) {
-        if sender.value%10 != 0 {
+        if isGameMode {
+            selectedPixel.status = UIButton.status.gameAnswer.rawValue
+            backRec.append(backRecord(btn: selectedPixel, value: sender.value%10))
+            backBtn.isEnabled = true
+        } else if sender.value%10 != 0 {
             selectedPixel.status = UIButton.status.question.rawValue
         } else {
             selectedPixel.status = UIButton.status.answer.rawValue
@@ -136,22 +170,23 @@ class ViewController: UIViewController {
     }
     
     func addResetBtn() {
-        let height = self.view.bounds.height
-        let width = self.view.bounds.width
-        
         let edge: Int = Int(width / 10)
         let sizeX: Int = (Int(width) - edge * 3) / 2
         
-        let button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-        button.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/5*4)
-        button.backgroundColor = UIColor.lightGray
-        button.setTitle("RESET", for: .normal)
-        button.setTitleColor(UIColor.darkGray, for: .normal)
-        button.setTitleColor(UIColor.darkText, for: .highlighted)
-        button.layer.cornerRadius = 6
-        
-        button.addTarget(self, action: #selector(reset9x9), for: .touchUpInside)
-        view.addSubview(button)
+        if is16x9 {
+            resetBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+            resetBtn.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/5*4)
+        } else {
+            resetBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
+            resetBtn.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/16*14)
+        }
+        resetBtn.backgroundColor = UIColor.lightGray
+        resetBtn.setTitle("RESET", for: .normal)
+        resetBtn.setTitleColor(UIColor.darkGray, for: .normal)
+        resetBtn.setTitleColor(UIColor.darkText, for: .highlighted)
+        resetBtn.layer.cornerRadius = 6
+        resetBtn.addTarget(self, action: #selector(reset9x9), for: .touchUpInside)
+        view.addSubview(resetBtn)
     }
     
     @objc func reset9x9() {
@@ -165,22 +200,23 @@ class ViewController: UIViewController {
     }
 
     func addSolveBtn() {
-        let height = self.view.bounds.height
-        let width = self.view.bounds.width
-        
         let edge: Int = Int(width / 10)
         let sizeX: Int = (Int(width) - edge * 3) / 2
         
-        let button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-        button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/5*4)
-        button.backgroundColor = UIColor.lightGray
-        button.setTitle("SOLVE", for: .normal)
-        button.setTitleColor(UIColor.darkGray, for: .normal)
-        button.setTitleColor(UIColor.darkText, for: .highlighted)
-        button.layer.cornerRadius = 6
-        
-        button.addTarget(self, action: #selector(solve), for: .touchUpInside)
-        view.addSubview(button)
+        if is16x9 {
+            solveBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+            solveBtn.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/5*4)
+        } else {
+            solveBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
+            solveBtn.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/16*14)
+        }
+        solveBtn.backgroundColor = UIColor.lightGray
+        solveBtn.setTitle("SOLVE", for: .normal)
+        solveBtn.setTitleColor(UIColor.darkGray, for: .normal)
+        solveBtn.setTitleColor(UIColor.darkText, for: .highlighted)
+        solveBtn.layer.cornerRadius = 6
+        solveBtn.addTarget(self, action: #selector(solve), for: .touchUpInside)
+        view.addSubview(solveBtn)
     }
     
     @objc func solve() {
@@ -222,13 +258,18 @@ class ViewController: UIViewController {
                 } else {
                     if pixel[x][y].status == UIButton.status.question.rawValue {
                         pixel[x][y].setTitleColor(UIColor.darkText, for: .normal)
-                    } else {
+                    } else if pixel[x][y].status == UIButton.status.answer.rawValue {
+                        pixel[x][y].setTitleColor(UIColor.blue, for: .normal)
+                    } else if pixel[x][y].status == UIButton.status.gameQuestion.rawValue {
+                        pixel[x][y].setTitleColor(UIColor.white, for: .normal)
+                        pixel[x][y].backgroundColor = UIColor.darkGray
+                    } else if pixel[x][y].status == UIButton.status.gameAnswer.rawValue {
                         pixel[x][y].setTitleColor(UIColor.blue, for: .normal)
                     }
                 }
             }
         }
-
+        
         //row
         var row = [Int]()
         for x: Int in 0...8 {
@@ -630,13 +671,200 @@ class ViewController: UIViewController {
             }
         }
     }
+    
+    func addGameModeBtn() {
+        let edge: Int = Int(width / 10)
+        let sizeX: Int = (Int(width) - edge * 3) / 2
+        
+        reset9x9()
+        
+        var button = UIButton()
+        if is16x9 {
+            button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+            button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/10)
+        } else {
+            button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
+            button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/14)
+        }
+        button.backgroundColor = UIColor.lightGray
+        button.setTitle("Game Mode", for: .normal)
+        button.setTitleColor(UIColor.darkGray, for: .normal)
+        button.setTitleColor(UIColor.darkText, for: .highlighted)
+        button.layer.cornerRadius = 6
+        button.addTarget(self, action: #selector(gameMode(_:)), for: .touchUpInside)
+        view.addSubview(button)
+        
+        if is16x9 {
+            newGameBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
+            newGameBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/10)
+        } else {
+            newGameBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
+            newGameBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/14)
+        }
+        newGameBtn.backgroundColor = UIColor.lightGray
+        newGameBtn.setTitle("New", for: .normal)
+        newGameBtn.setTitleColor(UIColor.darkGray, for: .normal)
+        newGameBtn.setTitleColor(UIColor.darkText, for: .highlighted)
+        newGameBtn.layer.cornerRadius = 6
+        newGameBtn.addTarget(self, action: #selector(newGame(_:)), for: .touchUpInside)
+        view.addSubview(newGameBtn)
+        newGameBtn.isHidden = true
 
+        if is16x9 {
+            backBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
+            backBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/5*4)
+        } else {
+            backBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
+            backBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/16*14)
+        }
+        backBtn.backgroundColor = UIColor.lightGray
+        backBtn.setTitle("Back", for: .normal)
+        backBtn.setTitleColor(UIColor.darkGray, for: .normal)
+        backBtn.setTitleColor(UIColor.darkText, for: .highlighted)
+        backBtn.setTitleColor(UIColor.groupTableViewBackground, for: .disabled)
+        backBtn.layer.cornerRadius = 6
+        backBtn.addTarget(self, action: #selector(back(_:)), for: .touchUpInside)
+        view.addSubview(backBtn)
+        backBtn.isHidden = true
+        backBtn.isEnabled = false
+
+        if is16x9 {
+            penBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
+            penBtn.center = CGPoint(x: CGFloat(edge+sizeX*3/4), y: height/5*4)
+        } else {
+            penBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
+            penBtn.center = CGPoint(x: CGFloat(edge+sizeX*3/4), y: height/16*14)
+        }
+        penBtn.backgroundColor = UIColor.lightGray
+        penBtn.setTitle("Pen", for: .normal)
+        penBtn.setTitleColor(UIColor.darkGray, for: .normal)
+        penBtn.setTitleColor(UIColor.darkText, for: .highlighted)
+        penBtn.layer.cornerRadius = 6
+        penBtn.addTarget(self, action: #selector(pen(_:)), for: .touchUpInside)
+        view.addSubview(penBtn)
+        penBtn.isHidden = true
+    }
+    
+    @objc func gameMode(_ sender: UIButton!) {
+        isGameMode = !isGameMode
+        if isGameMode {
+            sender.setTitle("Solve Mode", for: .normal)
+            resetBtn.isHidden = true
+            solveBtn.isHidden = true
+            newGameBtn.isHidden = false
+            backBtn.isHidden = false
+            penBtn.isHidden = false
+        } else {
+            sender.setTitle("Game Mode", for: .normal)
+            resetBtn.isHidden = false
+            solveBtn.isHidden = false
+            newGameBtn.isHidden = true
+            backBtn.isHidden = true
+            penBtn.isHidden = true
+        }
+    }
+    
+    @objc func newGame(_ sender: UIButton!) {
+        //cell number:
+        //38 - easy
+        //30 - normal
+        //25 - hard
+        //23 - super hard
+        let modeSelect = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        let easyMode = UIAlertAction(title: "easy", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 38)}
+        let normalMode = UIAlertAction(title: "normal", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 30)}
+        let hardMode = UIAlertAction(title: "hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 25)}
+        let superHardMode = UIAlertAction(title: "super hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 23)}
+        modeSelect.addAction(easyMode)
+        modeSelect.addAction(normalMode)
+        modeSelect.addAction(hardMode)
+        modeSelect.addAction(superHardMode)
+        self.present(modeSelect, animated: true, completion:nil)
+    }
+
+    @objc func back(_ sender: UIButton!) {
+        let tempRec = backRec.popLast()
+        tempRec?.btn.value = 0
+        backRec.last?.btn.value = (backRec.last?.value)!
+        _ = showDuplicates()
+        if backRec.isEmpty {
+            sender.isEnabled = false
+        } else {
+            sender.isEnabled = true
+        }
+    }
+    
+    @objc func pen(_ sender: UIButton!) {
+        isPencil = !isPencil
+        if isPencil {
+            sender.setTitle("Pencil", for: .normal)
+        } else {
+            sender.setTitle("Pen", for: .normal)
+        }
+        
+        /*
+         let duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
+         let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
+         duplicatesAlert.addAction(OKAction)
+         self.present(duplicatesAlert, animated: true, completion:nil)
+         */
+        
+    }
+    
+    struct record {
+        var x: Int
+        var y: Int
+        var value: Int
+    }
+    
+    func createGame(cell: Int) {
+        var tempCell = 5
+        var targetCell = cell
+
+        repeat {
+            reset9x9()
+            rec = [record]()
+            repeat {
+                let x = Int(arc4random_uniform(9))
+                let y = Int(arc4random_uniform(9))
+                let value = Int(arc4random_uniform(9)+1)
+                if pixel[x][y].value == 0 {
+                    pixel[x][y].value = value
+                    if checkDuplicates(x: x, y: y) {
+                        pixel[x][y].value = 0
+                    } else {
+                        tempCell -= 1
+                    }
+                }
+            } while tempCell != 0
+            depthFirstSearch()
+        } while !checkFinish()
+        
+        repeat {
+            let x = Int(arc4random_uniform(9))
+            let y = Int(arc4random_uniform(9))
+            if pixel[x][y].value != 0 {
+                rec.append(record(x: x, y: y, value: pixel[x][y].value))
+                pixel[x][y].value = 0
+                targetCell -= 1
+            }
+        } while targetCell != 0
+
+        reset9x9()
+        for i in 0..<rec.count {
+            pixel[rec[i].x][rec[i].y].status = UIButton.status.gameQuestion.rawValue
+            pixel[rec[i].x][rec[i].y].value = rec[i].value
+        }
+        rec = [record]()
+    }
 }
 
 extension UIButton {
     enum status: Int {
         case question = 1
         case answer = 0
+        case gameQuestion = 11
+        case gameAnswer = 10
     }
     
     private struct cell {
@@ -659,6 +887,11 @@ extension UIButton {
                         self.setTitleColor(UIColor.darkText, for: .normal)
                     } else if status == UIButton.status.answer.rawValue {
                         self.setTitleColor(UIColor.blue, for: .normal)
+                    } else if status == UIButton.status.gameQuestion.rawValue {
+                        self.setTitleColor(UIColor.white, for: .normal)
+                        self.backgroundColor = UIColor.darkGray
+                    } else if status == UIButton.status.gameAnswer.rawValue {
+                        self.setTitleColor(UIColor.blue, for: .normal)
                     } else {
                         self.setTitleColor(UIColor.lightGray, for: .normal)
                     }
@@ -677,10 +910,14 @@ extension UIButton {
     }
 
     func finish(flag: Bool) {
-        if flag {
-            self.backgroundColor = UIColor.groupTableViewBackground
+        if self.status != status.gameQuestion.rawValue {
+            if flag {
+                self.backgroundColor = UIColor.groupTableViewBackground
+            } else {
+                self.backgroundColor = UIColor.clear
+            }
         } else {
-            self.backgroundColor = UIColor.clear
+            self.backgroundColor = UIColor.darkGray
         }
     }
 }
