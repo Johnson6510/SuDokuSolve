@@ -17,7 +17,11 @@ class ViewController: UIViewController {
     var area = [[UIView]]()
     var pixel = [[UIButton]]()
     var mark = [Int]()
-    
+
+    var pencilArea = [[UIView]]()
+    var pencilX: Int = 0
+    var pencilY: Int = 0
+
     var btn = [UIButton]()
     var selectedPixel = UIButton()
     var isKeyBoardLock: Bool = false
@@ -69,13 +73,18 @@ class ViewController: UIViewController {
             if x%3 == 0 {
                 area.append([UIView]())
             }
+            pencilArea.append([UIView]())
             pixel.append([UIButton]())
             for y: Int in 0...8 {
                 if x%3 == 0 && y%3 == 0 {
                     area[x/3].append(addArea(location: (x/3, y/3)))
                     view.addSubview(area[x/3][y/3])
                 }
+                pencilArea[x].append(addPencilArea(location: (x%3, y%3)))
+                area[x/3][y/3].addSubview(pencilArea[x][y])
                 pixel[x].append(addPixel(location: (x%3, y%3)))
+                pixel[x][y].x = x
+                pixel[x][y].y = y
                 pixel[x][y].value = 0
                 pixel[x][y].status = UIButton.status.answer.rawValue
                 area[x/3][y/3].addSubview(pixel[x][y])
@@ -117,14 +126,34 @@ class ViewController: UIViewController {
         return button
     }
     
+    func addPencilArea(location: (Int, Int)) -> UIView {
+        let edge: Int = Int(width / 20)
+        let size: Int = (Int(width) - edge * 2) / 9
+
+        let (x, y) = location
+        let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
+        view.center = CGPoint(x: x*size+size/2, y: y*size+size/2)
+        
+        return view
+    }
+
     @objc func clickButton(_ sender: UIButton!) {
         if !isKeyBoardLock && sender.status != UIButton.status.gameQuestion.rawValue {
             let buttonCenter = CGPoint(x: sender.bounds.origin.x + sender.bounds.size.width / 2, y: sender.bounds.origin.y + sender.bounds.size.height / 2)
             
             let position = sender.convert(buttonCenter, to: self.view)
-            addNumberKeyboard(position: position)
+            if isPencil {
+                if sender.value == 0 {
+                    addPencilKeyboard(position: position)
+                    isKeyBoardLock = true
+                }
+            } else {
+                addNumberKeyboard(position: position)
+                isKeyBoardLock = true
+            }
+            pencilX = sender.x
+            pencilY = sender.y
             selectedPixel = sender
-            isKeyBoardLock = true
         }
     }
     
@@ -150,7 +179,32 @@ class ViewController: UIViewController {
             view.addSubview(btn[x])
         }
     }
-    
+
+    func addPencilKeyboard(position: CGPoint) {
+        let size: Int = 25
+        var pos: CGPoint = CGPoint(x: 0, y: 0)
+        
+        btn.removeAll()
+        for x: Int in 0...9 {
+            btn.append(UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size)))
+            btn[x].value = x+1
+            if x != 9 {
+                pos.x = position.x + CGFloat(x % 3 * size - size)
+                pos.y = position.y + CGFloat(x / 3 * size - size)
+            } else {
+                pos.x = position.x
+                pos.y = position.y + CGFloat(size * 2)
+                btn[x].setTitle(String("x"), for: .normal)
+            }
+            btn[x].backgroundColor = UIColor.brown
+            btn[x].titleLabel?.font = UIFont(name: "Noteworthy", size: CGFloat(size-10))
+            btn[x].layer.cornerRadius = 6
+            btn[x].center = CGPoint(x: pos.x, y: pos.y)
+            btn[x].addTarget(self, action: #selector(ViewController.pencilMark(_:)), for: .touchUpInside)
+            view.addSubview(btn[x])
+        }
+    }
+
     struct backRecord {
         var btn = UIButton()
         var value: Int
@@ -158,9 +212,14 @@ class ViewController: UIViewController {
     
     @objc func setNumber(_ sender: UIButton!) {
         if isGameMode {
-            selectedPixel.status = UIButton.status.gameAnswer.rawValue
+            selectedPixel.status = UIButton.status.answer.rawValue
             backRec.append(backRecord(btn: selectedPixel, value: sender.value%10))
             backBtn.isEnabled = true
+            if sender.value%10 != 0 {
+                for label in pencilArea[pencilX][pencilY].subviews {
+                    label.removeFromSuperview()
+                }
+            }
         } else if sender.value%10 != 0 {
             selectedPixel.status = UIButton.status.question.rawValue
         } else {
@@ -185,6 +244,28 @@ class ViewController: UIViewController {
         }
     }
     
+    @objc func pencilMark(_ sender: UIButton!) {
+        if sender.value%10 != 0 {
+            let edge: Int = Int(width / 20)
+            let size: Int = (Int(width) - edge * 2) / 9 / 3
+            let label = UILabel(frame: CGRect(x: 0, y: 0, width: size, height: size))
+            label.center = CGPoint(x: (sender.value%10-1)%3*size+size/2+3, y: (sender.value%10-1)/3*size+size/2)
+            label.text = String(sender.value%10)
+            label.font = UIFont(name: "Noteworthy", size: CGFloat(size-3))
+            pencilArea[pencilX][pencilY].addSubview(label)
+        } else {
+            for label in pencilArea[pencilX][pencilY].subviews {
+                label.removeFromSuperview()
+            }
+        }
+        
+        for x in 0...9 {
+            btn[x].removeFromSuperview()
+        }
+        isKeyBoardLock = false
+
+    }
+
     func addResetBtn() {
         let edge: Int = Int(width / 10)
         let sizeX: Int = (Int(width) - edge * 3) / 2
@@ -211,6 +292,9 @@ class ViewController: UIViewController {
                 pixel[x][y].value = 0
                 pixel[x][y].status = UIButton.status.answer.rawValue
                 pixel[x][y].finish(flag: false)
+                for label in pencilArea[x][y].subviews {
+                    label.removeFromSuperview()
+                }
             }
         }
     }
@@ -279,8 +363,6 @@ class ViewController: UIViewController {
                     } else if pixel[x][y].status == UIButton.status.gameQuestion.rawValue {
                         pixel[x][y].setTitleColor(UIColor.white, for: .normal)
                         pixel[x][y].backgroundColor = UIColor.darkGray
-                    } else if pixel[x][y].status == UIButton.status.gameAnswer.rawValue {
-                        pixel[x][y].setTitleColor(UIColor.blue, for: .normal)
                     }
                 }
             }
@@ -806,6 +888,8 @@ class ViewController: UIViewController {
         modeLabel.text = ""
         backRec = [backRecord]()
         backBtn.isEnabled = false
+        isPencil = false
+        penBtn.setTitle("Pen", for: .normal)
     }
     
     @objc func newGame(_ sender: UIButton!) {
@@ -841,14 +925,6 @@ class ViewController: UIViewController {
         } else {
             sender.setTitle("Pen", for: .normal)
         }
-        
-        /*
-         let duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
-         let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
-         duplicatesAlert.addAction(OKAction)
-         self.present(duplicatesAlert, animated: true, completion:nil)
-         */
-        
     }
     
     func SecondsToHoursMinutesSeconds(sec: Int) -> String {
@@ -888,6 +964,8 @@ class ViewController: UIViewController {
         var targetCell = cell
 
         stopTime()
+        backRec = [backRecord]()
+        backBtn.isEnabled = false
 
         repeat {
             reset9x9()
@@ -934,12 +1012,13 @@ extension UIButton {
         case question = 1
         case answer = 0
         case gameQuestion = 11
-        case gameAnswer = 10
     }
     
     private struct cell {
         static var value: Int = 0
         static var status: Int = 0
+        static var x: Int = 0
+        static var y: Int = 0
     }
     
     var value: Int {
@@ -960,10 +1039,6 @@ extension UIButton {
                     } else if status == UIButton.status.gameQuestion.rawValue {
                         self.setTitleColor(UIColor.white, for: .normal)
                         self.backgroundColor = UIColor.darkGray
-                    } else if status == UIButton.status.gameAnswer.rawValue {
-                        self.setTitleColor(UIColor.blue, for: .normal)
-                    } else {
-                        self.setTitleColor(UIColor.lightGray, for: .normal)
                     }
                 }
             }
@@ -978,6 +1053,25 @@ extension UIButton {
             objc_setAssociatedObject(self, &cell.status, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
+    
+    var x: Int {
+        get {
+            return objc_getAssociatedObject(self, &cell.x) as! Int
+        }
+        set {
+            objc_setAssociatedObject(self, &cell.x, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    var y: Int {
+        get {
+            return objc_getAssociatedObject(self, &cell.y) as! Int
+        }
+        set {
+            objc_setAssociatedObject(self, &cell.y, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
 
     func finish(flag: Bool) {
         if self.status != status.gameQuestion.rawValue {
