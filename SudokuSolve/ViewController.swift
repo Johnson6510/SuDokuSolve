@@ -12,6 +12,10 @@ class ViewController: UIViewController {
     
     var height: CGFloat = 0
     var width: CGFloat = 0
+    var upperAlign: CGFloat = 0
+    var underAlign: CGFloat = 0
+    var imageSize: CGFloat = 140
+    
     var is16x9: Bool = false
 
     var area = [[UIView]]()
@@ -48,13 +52,17 @@ class ViewController: UIViewController {
         // Do any additional setup after loading the view, typically from a nib.
         height = self.view.bounds.height
         width = self.view.bounds.width
-        print(height/width)
+        print(width, height, height/width)
         if height/width > 1.5 {
             is16x9 = true
             print("16:9")
+            upperAlign = height * 0.1
+            underAlign = height * 0.8
         } else {
             is16x9 = false
             print("4:3")
+            upperAlign = height * 0.1
+            underAlign = height * 0.9
         }
 
         init9x9()
@@ -77,12 +85,12 @@ class ViewController: UIViewController {
             pixel.append([UIButton]())
             for y: Int in 0...8 {
                 if x%3 == 0 && y%3 == 0 {
-                    area[x/3].append(addArea(location: (x/3, y/3)))
+                    area[x/3].append(addArea(location: (CGFloat(x/3), CGFloat(y/3))))
                     view.addSubview(area[x/3][y/3])
                 }
-                pencilArea[x].append(addPencilArea(location: (x%3, y%3)))
+                pencilArea[x].append(addPencilArea(location: (CGFloat(x%3), CGFloat(y%3))))
                 area[x/3][y/3].addSubview(pencilArea[x][y])
-                pixel[x].append(addPixel(location: (x%3, y%3)))
+                pixel[x].append(addPixel(location: (CGFloat(x%3), CGFloat(y%3))))
                 pixel[x][y].x = x
                 pixel[x][y].y = y
                 pixel[x][y].value = 0
@@ -92,32 +100,33 @@ class ViewController: UIViewController {
         }
     }
     
-    func addArea(location: (Int, Int)) -> UIView {
-        let borderWidth = 2
-        let edge: Int = Int(width / 20)
-        var heightOffset = Int(height / 5)
-        if !is16x9 {
-            heightOffset = heightOffset/4*3
+    func addArea(location: (CGFloat, CGFloat)) -> UIView {
+        let borderWidth: CGFloat = 2
+        let edge: CGFloat = width * 0.1
+        var heightOffset: CGFloat = 0
+        if is16x9 {
+            heightOffset = height * 0.2
+        } else {
+            heightOffset = height * 0.15
         }
-        let size: Int = (Int(width) - edge * 2) / 3 - 3
+        let size: CGFloat = edge * 3
 
         let (x, y) = location
         let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.center = CGPoint(x: edge*5/4+x*size+size/2-x*borderWidth, y: heightOffset+y*size+size/2-y*borderWidth)
+        view.center = CGPoint(x: (edge+size)/2+(size-borderWidth)*x, y: heightOffset+(edge+size)/2+(size-borderWidth)*y)
         view.layer.borderColor = UIColor.black.cgColor
         view.layer.borderWidth = CGFloat(borderWidth)
         
         return view
     }
 
-    func addPixel(location: (Int, Int)) -> UIButton {
-        let borderWidth = 1
-        let edge: Int = Int(width / 20)
-        let size: Int = (Int(width) - edge * 2) / 9
+    func addPixel(location: (CGFloat, CGFloat)) -> UIButton {
+        let borderWidth: CGFloat = 1
+        let size: CGFloat = width * 0.1
 
         let (x, y) = location
         let button = UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        button.center = CGPoint(x: x*size+size/2-x*borderWidth, y: y*size+size/2-y*borderWidth)
+        button.center = CGPoint(x: size*(x+0.5)-borderWidth*x, y: size*(y+0.5)-borderWidth*y)
         button.layer.borderColor = UIColor.lightGray.cgColor
         button.layer.borderWidth = CGFloat(borderWidth)
         button.titleLabel?.font = UIFont(name: "Hiragino Maru Gothic ProN", size: CGFloat(size-20))
@@ -126,13 +135,12 @@ class ViewController: UIViewController {
         return button
     }
     
-    func addPencilArea(location: (Int, Int)) -> UIView {
-        let edge: Int = Int(width / 20)
-        let size: Int = (Int(width) - edge * 2) / 9
+    func addPencilArea(location: (CGFloat, CGFloat)) -> UIView {
+        let size: CGFloat = width * 0.1
 
         let (x, y) = location
         let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.center = CGPoint(x: x*size+size/2, y: y*size+size/2)
+        view.center = CGPoint(x: size*(x+0.5), y: size*(y+0.5))
         
         return view
     }
@@ -159,18 +167,18 @@ class ViewController: UIViewController {
     
     func addNumberKeyboard(position: CGPoint) {
         let number: [String] = ["1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🆓"]
-        let size: Int = 25
+        let size: CGFloat = 25
         var pos: CGPoint = CGPoint(x: 0, y: 0)
         
         btn.removeAll()
         for x: Int in 0...9 {
             btn.append(UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size)))
             if x != 9 {
-                pos.x = position.x + CGFloat(x % 3 * size - size)
-                pos.y = position.y + CGFloat(x / 3 * size - size)
+                pos.x = position.x + CGFloat(x%3-1)*size
+                pos.y = position.y + CGFloat(x/3-1)*size
             } else {
                 pos.x = position.x
-                pos.y = position.y + CGFloat(size * 2)
+                pos.y = position.y + CGFloat(size*2)
             }
             btn[x].center = CGPoint(x: pos.x, y: pos.y)
             btn[x].value = x+1
@@ -181,7 +189,7 @@ class ViewController: UIViewController {
     }
 
     func addPencilKeyboard(position: CGPoint) {
-        let size: Int = 25
+        let size: CGFloat = 25
         var pos: CGPoint = CGPoint(x: 0, y: 0)
         
         btn.removeAll()
@@ -189,11 +197,11 @@ class ViewController: UIViewController {
             btn.append(UIButton(frame: CGRect(x: 0, y: 0, width: size, height: size)))
             btn[x].value = x+1
             if x != 9 {
-                pos.x = position.x + CGFloat(x % 3 * size - size)
-                pos.y = position.y + CGFloat(x / 3 * size - size)
+                pos.x = position.x + CGFloat(x%3-1)*size
+                pos.y = position.y + CGFloat(x/3-1)*size
             } else {
                 pos.x = position.x
-                pos.y = position.y + CGFloat(size * 2)
+                pos.y = position.y + CGFloat(size*2)
                 btn[x].setTitle(String("x"), for: .normal)
             }
             btn[x].backgroundColor = UIColor.brown
@@ -236,7 +244,13 @@ class ViewController: UIViewController {
                 pauseTime()
                 backRec = [backRecord]()
                 backBtn.isEnabled = false
-                let finishAlert = UIAlertController(title: "Congratulations", message: "You finished the game!!!", preferredStyle: .actionSheet)
+                var finishAlert = UIAlertController()
+                if UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiom.phone {
+                    finishAlert = UIAlertController(title: "Congratulations", message: "You finished the game!!!", preferredStyle: .actionSheet)
+                } else {
+                    //iPad can not use .actionSheet
+                    finishAlert = UIAlertController(title: "Congratulations", message: "You finished the game!!!", preferredStyle: .alert)
+                }
                 let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
                 finishAlert.addAction(OKAction)
                 self.present(finishAlert, animated: true, completion:nil)
@@ -246,10 +260,9 @@ class ViewController: UIViewController {
     
     @objc func pencilMark(_ sender: UIButton!) {
         if sender.value%10 != 0 {
-            let edge: Int = Int(width / 20)
-            let size: Int = (Int(width) - edge * 2) / 9 / 3
+            let size: CGFloat = width*0.03
             let label = UILabel(frame: CGRect(x: 0, y: 0, width: size, height: size))
-            label.center = CGPoint(x: (sender.value%10-1)%3*size+size/2+3, y: (sender.value%10-1)/3*size+size/2)
+            label.center = CGPoint(x: CGFloat((sender.value%10-1)%3)*(size+0.5)+width*0.02, y: CGFloat((sender.value%10-1)/3)*(size+0.5)+width*0.02)
             label.text = String(sender.value%10)
             label.font = UIFont(name: "Noteworthy", size: CGFloat(size-3))
             pencilArea[pencilX][pencilY].addSubview(label)
@@ -267,21 +280,11 @@ class ViewController: UIViewController {
     }
 
     func addResetBtn() {
-        let edge: Int = Int(width / 10)
-        let sizeX: Int = (Int(width) - edge * 3) / 2
+        let edge: CGFloat = width * 0.1
         
-        if is16x9 {
-            resetBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-            resetBtn.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/5*4)
-        } else {
-            resetBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
-            resetBtn.center = CGPoint(x: CGFloat(edge+sizeX/2), y: height/16*14)
-        }
-        resetBtn.backgroundColor = UIColor.lightGray
-        resetBtn.setTitle("RESET", for: .normal)
-        resetBtn.setTitleColor(UIColor.darkGray, for: .normal)
-        resetBtn.setTitleColor(UIColor.darkText, for: .highlighted)
-        resetBtn.layer.cornerRadius = 6
+        resetBtn = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize*0.5, height: imageSize*0.5))
+        resetBtn.center = CGPoint(x: edge, y: underAlign)
+        resetBtn.setImage(#imageLiteral(resourceName: "reset"), for: .normal)
         resetBtn.addTarget(self, action: #selector(reset9x9), for: .touchUpInside)
         view.addSubview(resetBtn)
     }
@@ -300,28 +303,24 @@ class ViewController: UIViewController {
     }
 
     func addSolveBtn() {
-        let edge: Int = Int(width / 10)
-        let sizeX: Int = (Int(width) - edge * 3) / 2
+        let edge: CGFloat = width * 0.9
         
-        if is16x9 {
-            solveBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-            solveBtn.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/5*4)
-        } else {
-            solveBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
-            solveBtn.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/16*14)
-        }
-        solveBtn.backgroundColor = UIColor.lightGray
-        solveBtn.setTitle("SOLVE", for: .normal)
-        solveBtn.setTitleColor(UIColor.darkGray, for: .normal)
-        solveBtn.setTitleColor(UIColor.darkText, for: .highlighted)
-        solveBtn.layer.cornerRadius = 6
+        solveBtn = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize*0.5, height: imageSize*0.5))
+        solveBtn.center = CGPoint(x: edge, y: underAlign)
+        solveBtn.setImage(#imageLiteral(resourceName: "solve"), for: .normal)
         solveBtn.addTarget(self, action: #selector(solve), for: .touchUpInside)
         view.addSubview(solveBtn)
     }
     
     @objc func solve() {
         if !showDuplicates() {
-            let duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
+            var duplicatesAlert = UIAlertController()
+            if UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiom.phone {
+                duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .actionSheet)
+            } else {
+                //iPad can not use .actionSheet
+                duplicatesAlert = UIAlertController(title: "Alert", message: "duplicates cell found!!!", preferredStyle: .alert)
+            }
             let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
             duplicatesAlert.addAction(OKAction)
             self.present(duplicatesAlert, animated: true, completion:nil)
@@ -667,8 +666,8 @@ class ViewController: UIViewController {
     func depthFirstSearch() {
         var found = [Int]()
         var min: Int
-        var tempX: Int = -1
-        var tempY: Int = -1
+        var tempX: Int = 0
+        var tempY: Int = 0
         var tempAns: Int
         var menoryX = [Int]()
         var menoryY = [Int]()
@@ -771,109 +770,60 @@ class ViewController: UIViewController {
     }
     
     func addGameModeBtn() {
-        let edge: Int = Int(width / 10)
-        let sizeX: Int = (Int(width) - edge * 3) / 2
-        
-        reset9x9()
+        let edge: CGFloat = width * 0.1
         
         var button = UIButton()
-        if is16x9 {
-            button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-            button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/10)
-        } else {
-            button = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
-            button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/14)
-        }
-        button.backgroundColor = UIColor.lightGray
-        button.setTitle("To Game Mode", for: .normal)
-        button.setTitleColor(UIColor.darkGray, for: .normal)
-        button.setTitleColor(UIColor.darkText, for: .highlighted)
-        button.layer.cornerRadius = 6
+        button = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize, height: imageSize*0.5))
+        button.center = CGPoint(x: edge*8, y: upperAlign)
+        button.setImage(#imageLiteral(resourceName: "toGame"), for: .normal)
         button.addTarget(self, action: #selector(gameMode(_:)), for: .touchUpInside)
         view.addSubview(button)
         
-        if is16x9 {
-            newGameBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
-            newGameBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/10)
-        } else {
-            newGameBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
-            newGameBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/14)
-        }
-        newGameBtn.backgroundColor = UIColor.lightGray
-        newGameBtn.setTitle("New", for: .normal)
-        newGameBtn.setTitleColor(UIColor.darkGray, for: .normal)
-        newGameBtn.setTitleColor(UIColor.darkText, for: .highlighted)
-        newGameBtn.layer.cornerRadius = 6
+        newGameBtn = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize*0.5, height: imageSize*0.5))
+        newGameBtn.center = CGPoint(x: width*0.1, y: underAlign)
+        newGameBtn.setImage(#imageLiteral(resourceName: "new"), for: .normal)
         newGameBtn.addTarget(self, action: #selector(newGame(_:)), for: .touchUpInside)
         view.addSubview(newGameBtn)
         newGameBtn.isHidden = true
 
-        if is16x9 {
-            backBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
-            backBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/5*4)
-        } else {
-            backBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
-            backBtn.center = CGPoint(x: CGFloat(edge/2+sizeX/4), y: height/16*14)
-        }
-        backBtn.backgroundColor = UIColor.lightGray
-        backBtn.setTitle("Back", for: .normal)
-        backBtn.setTitleColor(UIColor.darkGray, for: .normal)
-        backBtn.setTitleColor(UIColor.darkText, for: .highlighted)
-        backBtn.setTitleColor(UIColor.groupTableViewBackground, for: .disabled)
-        backBtn.layer.cornerRadius = 6
+        backBtn = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize*0.5, height: imageSize*0.5))
+        backBtn.center = CGPoint(x: width*0.5, y: underAlign)
+        backBtn.setImage(#imageLiteral(resourceName: "back-en"), for: .normal)
+        backBtn.setImage(#imageLiteral(resourceName: "back-dis"), for: .disabled)
         backBtn.addTarget(self, action: #selector(back(_:)), for: .touchUpInside)
         view.addSubview(backBtn)
         backBtn.isHidden = true
         backBtn.isEnabled = false
 
-        if is16x9 {
-            penBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/2))
-            penBtn.center = CGPoint(x: CGFloat(edge+sizeX*3/4), y: height/5*4)
-        } else {
-            penBtn = UIButton(frame: CGRect(x: 0, y: 0, width: sizeX/2, height: sizeX/3))
-            penBtn.center = CGPoint(x: CGFloat(edge+sizeX*3/4), y: height/16*14)
-        }
-        penBtn.backgroundColor = UIColor.lightGray
-        penBtn.setTitle("Pen", for: .normal)
-        penBtn.setTitleColor(UIColor.darkGray, for: .normal)
-        penBtn.setTitleColor(UIColor.darkText, for: .highlighted)
-        penBtn.layer.cornerRadius = 6
+        penBtn = UIButton(frame: CGRect(x: 0, y: 0, width: imageSize*0.5, height: imageSize*0.5))
+        penBtn.center = CGPoint(x: width*0.9, y: underAlign)
+        penBtn.setImage(#imageLiteral(resourceName: "pen"), for: .normal)
         penBtn.addTarget(self, action: #selector(pen(_:)), for: .touchUpInside)
         view.addSubview(penBtn)
         penBtn.isHidden = true
         
-        if is16x9 {
-            modeLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
-            modeLabel.center = CGPoint(x: CGFloat(edge/2+sizeX), y: height/10)
-        } else {
-            modeLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
-            modeLabel.center = CGPoint(x: CGFloat(edge/2+sizeX), y: height/14)
-        }
-        modeLabel.text = ""
-        modeLabel.textAlignment = .center
-        view.addSubview(modeLabel)
-        modeLabel.isHidden = true
-
-        if is16x9 {
-            timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX*3/2, height: sizeX/2))
-            timerLabel.center = CGPoint(x: CGFloat(edge*3/2+sizeX*5/4), y: height/5*4)
-        } else {
-            timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX*3/2, height: sizeX/3))
-            timerLabel.center = CGPoint(x: CGFloat(edge*3/2+sizeX*5/4), y: height/16*14)
-        }
+        timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: imageSize, height: imageSize*0.5))
+        timerLabel.center = CGPoint(x: width*0.5, y: upperAlign)
         timerLabel.text = "00:00:00"
         timerLabel.textAlignment = .center
         view.addSubview(timerLabel)
         timerLabel.isHidden = true
+
+        modeLabel = UILabel(frame: CGRect(x: 0, y: 0, width: imageSize, height: imageSize*0.5))
+        modeLabel.center = CGPoint(x: width*0.5, y: upperAlign + imageSize*0.5)
+        modeLabel.text = ""
+        modeLabel.textAlignment = .center
+        view.addSubview(modeLabel)
+        modeLabel.isHidden = true
     }
     
     @objc func gameMode(_ sender: UIButton!) {
         isGameMode = !isGameMode
         
         if isGameMode {
-            sender.setTitle("To Solve Mode", for: .normal)
+            sender.setImage(#imageLiteral(resourceName: "toSolve"), for: .normal)
         } else {
-            sender.setTitle("To Game Mode", for: .normal)
+            sender.setImage(#imageLiteral(resourceName: "toGame"), for: .normal)
         }
         resetBtn.isHidden = !resetBtn.isHidden
         solveBtn.isHidden = !solveBtn.isHidden
@@ -898,7 +848,13 @@ class ViewController: UIViewController {
         //30 - normal
         //25 - hard
         //23 - super hard
-        let modeSelect = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        var modeSelect = UIAlertController()
+        if UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiom.phone {
+            modeSelect = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        } else {
+            //iPad can not use .actionSheet
+            modeSelect = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
+        }
         let easyMode = UIAlertAction(title: "easy", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 38); self.modeLabel.text = "easy"}
         let normalMode = UIAlertAction(title: "normal", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 30); self.modeLabel.text = "normal"}
         let hardMode = UIAlertAction(title: "hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 25); self.modeLabel.text = "hard"}
@@ -921,9 +877,9 @@ class ViewController: UIViewController {
     @objc func pen(_ sender: UIButton!) {
         isPencil = !isPencil
         if isPencil {
-            sender.setTitle("Pencil", for: .normal)
+            sender.setImage(#imageLiteral(resourceName: "pencil"), for: .normal)
         } else {
-            sender.setTitle("Pen", for: .normal)
+            sender.setImage(#imageLiteral(resourceName: "pen"), for: .normal)
         }
     }
     
