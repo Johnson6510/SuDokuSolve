@@ -42,7 +42,11 @@ class ViewController: UIViewController {
 
     var timerLabel = UILabel()
     var timer = Timer()
-    var count = 0
+    var count: Int = 0 {
+        didSet {
+            timerLabel.text = SecondsToHoursMinutesSeconds(sec: count)
+        }
+    }
 
     var backRec = [backRecord]()
     var rec = [record]()
@@ -804,7 +808,6 @@ class ViewController: UIViewController {
         
         timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: imageSize, height: imageSize*0.5))
         timerLabel.center = CGPoint(x: width*0.5, y: upperAlign)
-        timerLabel.text = "00:00:00"
         timerLabel.textAlignment = .center
         view.addSubview(timerLabel)
         timerLabel.isHidden = true
@@ -839,7 +842,6 @@ class ViewController: UIViewController {
         backRec = [backRecord]()
         backBtn.isEnabled = false
         isPencil = false
-        penBtn.setTitle("Pen", for: .normal)
     }
     
     @objc func newGame(_ sender: UIButton!) {
@@ -896,7 +898,6 @@ class ViewController: UIViewController {
     
     @objc func updateTime() {
         count += 1
-        timerLabel.text = SecondsToHoursMinutesSeconds(sec: count)
     }
     
     func pauseTime() {
@@ -906,7 +907,6 @@ class ViewController: UIViewController {
     func stopTime() {
         timer.invalidate()
         count = 0
-        timerLabel.text = "00:00:00"
     }
 
     struct record {
