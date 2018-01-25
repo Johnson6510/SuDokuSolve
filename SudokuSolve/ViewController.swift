@@ -22,13 +22,19 @@ class ViewController: UIViewController {
     var selectedPixel = UIButton()
     var isKeyBoardLock: Bool = false
     
-    var isGameMode: Bool = false
     var solveBtn = UIButton()
     var resetBtn = UIButton()
+
+    var isGameMode: Bool = false
     var penBtn = UIButton()
     var isPencil: Bool = false
     var backBtn = UIButton()
     var newGameBtn = UIButton()
+    var modeLabel = UILabel()
+
+    var timerLabel = UILabel()
+    var timer = Timer()
+    var count = 0
 
     var backRec = [backRecord]()
     var rec = [record]()
@@ -166,7 +172,17 @@ class ViewController: UIViewController {
         }
         isKeyBoardLock = false
         _ = showDuplicates()
-        _ = checkFinish()
+        if checkFinish() {
+            if isGameMode {
+                pauseTime()
+                backRec = [backRecord]()
+                backBtn.isEnabled = false
+                let finishAlert = UIAlertController(title: "Congratulations", message: "You finished the game!!!", preferredStyle: .actionSheet)
+                let OKAction = UIAlertAction(title: "OK", style: .default) { (action:UIAlertAction!) in print("Ok button tapped")}
+                finishAlert.addAction(OKAction)
+                self.present(finishAlert, animated: true, completion:nil)
+            }
+        }
     }
     
     func addResetBtn() {
@@ -687,7 +703,7 @@ class ViewController: UIViewController {
             button.center = CGPoint(x: CGFloat(edge*2+sizeX*3/2), y: height/14)
         }
         button.backgroundColor = UIColor.lightGray
-        button.setTitle("Game Mode", for: .normal)
+        button.setTitle("To Game Mode", for: .normal)
         button.setTitleColor(UIColor.darkGray, for: .normal)
         button.setTitleColor(UIColor.darkText, for: .highlighted)
         button.layer.cornerRadius = 6
@@ -743,25 +759,53 @@ class ViewController: UIViewController {
         penBtn.addTarget(self, action: #selector(pen(_:)), for: .touchUpInside)
         view.addSubview(penBtn)
         penBtn.isHidden = true
+        
+        if is16x9 {
+            modeLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/2))
+            modeLabel.center = CGPoint(x: CGFloat(edge/2+sizeX), y: height/10)
+        } else {
+            modeLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX, height: sizeX/3))
+            modeLabel.center = CGPoint(x: CGFloat(edge/2+sizeX), y: height/14)
+        }
+        modeLabel.text = ""
+        modeLabel.textAlignment = .center
+        view.addSubview(modeLabel)
+        modeLabel.isHidden = true
+
+        if is16x9 {
+            timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX*3/2, height: sizeX/2))
+            timerLabel.center = CGPoint(x: CGFloat(edge*3/2+sizeX*5/4), y: height/5*4)
+        } else {
+            timerLabel = UILabel(frame: CGRect(x: 0, y: 0, width: sizeX*3/2, height: sizeX/3))
+            timerLabel.center = CGPoint(x: CGFloat(edge*3/2+sizeX*5/4), y: height/16*14)
+        }
+        timerLabel.text = "00:00:00"
+        timerLabel.textAlignment = .center
+        view.addSubview(timerLabel)
+        timerLabel.isHidden = true
     }
     
     @objc func gameMode(_ sender: UIButton!) {
         isGameMode = !isGameMode
+        
         if isGameMode {
-            sender.setTitle("Solve Mode", for: .normal)
-            resetBtn.isHidden = true
-            solveBtn.isHidden = true
-            newGameBtn.isHidden = false
-            backBtn.isHidden = false
-            penBtn.isHidden = false
+            sender.setTitle("To Solve Mode", for: .normal)
         } else {
-            sender.setTitle("Game Mode", for: .normal)
-            resetBtn.isHidden = false
-            solveBtn.isHidden = false
-            newGameBtn.isHidden = true
-            backBtn.isHidden = true
-            penBtn.isHidden = true
+            sender.setTitle("To Game Mode", for: .normal)
         }
+        resetBtn.isHidden = !resetBtn.isHidden
+        solveBtn.isHidden = !solveBtn.isHidden
+        newGameBtn.isHidden = !newGameBtn.isHidden
+        backBtn.isHidden = !backBtn.isHidden
+        penBtn.isHidden = !penBtn.isHidden
+        modeLabel.isHidden = !modeLabel.isHidden
+        timerLabel.isHidden = !timerLabel.isHidden
+        
+        reset9x9()
+        stopTime()
+        modeLabel.text = ""
+        backRec = [backRecord]()
+        backBtn.isEnabled = false
     }
     
     @objc func newGame(_ sender: UIButton!) {
@@ -771,10 +815,10 @@ class ViewController: UIViewController {
         //25 - hard
         //23 - super hard
         let modeSelect = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        let easyMode = UIAlertAction(title: "easy", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 38)}
-        let normalMode = UIAlertAction(title: "normal", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 30)}
-        let hardMode = UIAlertAction(title: "hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 25)}
-        let superHardMode = UIAlertAction(title: "super hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 23)}
+        let easyMode = UIAlertAction(title: "easy", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 38); self.modeLabel.text = "easy"}
+        let normalMode = UIAlertAction(title: "normal", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 30); self.modeLabel.text = "normal"}
+        let hardMode = UIAlertAction(title: "hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 25); self.modeLabel.text = "hard"}
+        let superHardMode = UIAlertAction(title: "super hard", style: .default) { (action:UIAlertAction!) in self.createGame(cell: 23); self.modeLabel.text = "super hard"}
         modeSelect.addAction(easyMode)
         modeSelect.addAction(normalMode)
         modeSelect.addAction(hardMode)
@@ -787,11 +831,7 @@ class ViewController: UIViewController {
         tempRec?.btn.value = 0
         backRec.last?.btn.value = (backRec.last?.value)!
         _ = showDuplicates()
-        if backRec.isEmpty {
-            sender.isEnabled = false
-        } else {
-            sender.isEnabled = true
-        }
+        sender.isEnabled = !backRec.isEmpty
     }
     
     @objc func pen(_ sender: UIButton!) {
@@ -811,6 +851,32 @@ class ViewController: UIViewController {
         
     }
     
+    func SecondsToHoursMinutesSeconds(sec: Int) -> String {
+        func getStringFrom(sec: Int) -> String {
+            return sec < 10 ? "0\(sec)" : "\(sec)"
+        }
+        return getStringFrom(sec: sec/3600) + ":" + getStringFrom(sec: (sec%3600)/60) + ":" + getStringFrom(sec: (sec%3600)%60)
+    }
+
+    func startTime() {
+        timer = Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(ViewController.updateTime), userInfo: nil, repeats: true)
+    }
+    
+    @objc func updateTime() {
+        count += 1
+        timerLabel.text = SecondsToHoursMinutesSeconds(sec: count)
+    }
+    
+    func pauseTime() {
+        timer.invalidate()
+    }
+
+    func stopTime() {
+        timer.invalidate()
+        count = 0
+        timerLabel.text = "00:00:00"
+    }
+
     struct record {
         var x: Int
         var y: Int
@@ -820,6 +886,8 @@ class ViewController: UIViewController {
     func createGame(cell: Int) {
         var tempCell = 5
         var targetCell = cell
+
+        stopTime()
 
         repeat {
             reset9x9()
@@ -856,6 +924,8 @@ class ViewController: UIViewController {
             pixel[rec[i].x][rec[i].y].value = rec[i].value
         }
         rec = [record]()
+        
+        startTime()
     }
 }
 
